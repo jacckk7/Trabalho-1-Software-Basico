@@ -48,6 +48,7 @@ void pre_process()
     int i = 0;
     while(i < linhas.size())
     {
+        transform(linhas[i].begin(), linhas[i].end(), linhas[i].begin(), ::toupper);
         linhas[i] = remove_space_comments(linhas[i]);
 
         if(linhas[i][0] == '\0') {

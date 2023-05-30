@@ -3,10 +3,31 @@
 #include <string>
 #include <fstream>
 #include <algorithm>
+#include <map>
+
+#define tabela vector<pair<pair<string, int>, pair<bool, vector<int>*>>>
 
 using namespace std;
 
 vector<string> linhas;
+vector<int> codigo;
+tabela tabelaSimbolos;
+map<string, int> opcode = {
+    {"ADD", 1},
+    {"SUB", 2},
+    {"MUL", 3},
+    {"DIV", 4},
+    {"JMP", 5},
+    {"JMPN", 6},
+    {"JMPP", 7},
+    {"JMPZ", 8},
+    {"COPY", 9},
+    {"LOAD", 10},
+    {"STORE", 11},
+    {"INPUT", 12},
+    {"OUTPUT", 13},
+    {"STOP", 14}
+};
 
 void create_arqv() {
     string filename("preprocess.exc");
@@ -76,6 +97,100 @@ void open_file(string file)
         }
     }
     arqv.close();
+}
+
+vector<string> listaComando(string s){
+    int i, cont = 0;
+    string linha = s, tolken;
+    vector<string> lista(4);
+    while (linha.size() > 0){
+        i = linha.find(" ");
+        tolken = linha.substr(0, i);
+        if(tolken != ","){
+            if (tolken[tolken.size() - 1] == ':'){
+                lista.push_back(tolken.substr(0, tolken.size() -1));
+            }else{
+                if(lista.size() == 0){
+                    lista.push_back("");
+                }
+                lista.push_back(tolken.substr(0, tolken.size()));
+            }
+            cont++;
+        }
+        linha = linha.substr(i + 1, (linha.size() - (tolken.size() + 1)));
+    }
+    return lista;   
+}
+
+bool erroLexico(vector<string> *s){
+    //verifica erro lexico
+}
+
+bool erroSemantico(vector<string> *s){
+    //verifica erro semantico
+}
+
+int findSimbolo(string s){
+     for(int i = 0; i < tabelaSimbolos.size(); i++){
+        if(tabelaSimbolos[i].first.first == s){
+            return i;
+        }
+     }
+     return -1;
+}
+
+void tratarPendencias(int valor, vector<int> *listaPendencias){
+    for(int i = 0; i < listaPendencias->size(); i++){
+        codigo[listaPendencias->at(i)] = valor;
+    }
+    listaPendencias->clear();
+}
+
+int getOpcode(string op){
+    
+}
+
+void montador(){
+    int contador = 0, i = 0, aux;
+    vector<string> comando;
+
+    while(i < linhas.size()){
+        comando = listaComando(linhas[i]);  // [simbolo, comando, arg1, agr2] => "" se n tiver simbolo ou agr2
+
+        if(erroLexico(&comando)){
+            //tratar erro lexico
+        }
+
+        else if(erroSemantico(&comando)){
+            //tratar erro semantico
+        }
+        else{
+            if(comando[0] != ""){
+                if((aux = findSimbolo(comando[0]) != -1)){  //se esta na tabela de simbolos
+                    if(tabelaSimbolos[aux].second.first == true){ //se ja foi definido
+                        //erro. declarou duas vezes um mesmo nome
+                    }else{
+                        //tratar lista de pendencias
+                        tratarPendencias(contador, tabelaSimbolos[aux].second.second);
+                        tabelaSimbolos[aux].second.first = true;
+                    }
+                }else{ // nao esta na tabela de simbolos => poe na tabela como definido
+                    vector<int> listaPendencias;
+                    tabelaSimbolos.push_back({{comando[0], contador}, {true, &listaPendencias}}); 
+                }
+            }
+            if(comando[1] == "SECTION"){
+                i++;
+                continue;
+            }              
+            codigo.push_back(comando[1]);     
+            
+
+        }
+        
+    }
+
+    
 }
 
 int main(int argc, char *argv[])

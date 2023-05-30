@@ -1,10 +1,10 @@
 SECTION TEXT
     INPUT OLD_DATA
     LOAD      OLD_DATA
-L1: DIV DOIS
+L1: DIV dois
     STORE  NEW_DATA
 ;sdsdxfedfsfedf
-    MUL DOIS
+    MUL dois
     STORE TMP_DATA                                         ;     ds dowsjhdis
     LOAD OLD_DATA
     SUB TMP_DATA
@@ -20,7 +20,7 @@ L1: DIV DOIS
     STOP
 
 SECTION DATA
-DOIS:
+dois: 
 CONST 2
 OLD_DATA:    SPACE
 NEW_DATA: SPACE

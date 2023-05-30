@@ -99,27 +99,41 @@ void open_file(string file)
     arqv.close();
 }
 
-vector<string> listaComando(string s){
-    int i, cont = 0;
-    string linha = s, tolken;
-    vector<string> lista(4);
-    while (linha.size() > 0){
-        i = linha.find(" ");
-        tolken = linha.substr(0, i);
-        if(tolken != ","){
-            if (tolken[tolken.size() - 1] == ':'){
-                lista.push_back(tolken.substr(0, tolken.size() -1));
-            }else{
-                if(lista.size() == 0){
-                    lista.push_back("");
-                }
-                lista.push_back(tolken.substr(0, tolken.size()));
-            }
-            cont++;
+vector<string> split(string s){
+    int i = 0;
+    string t = "";
+    vector<string> lista;
+    
+    while(i < s.size()){
+        
+        if(s[i] == ' '){
+            lista.push_back(t);
+            t = "";
+        }else{
+            t = t + s[i];
         }
-        linha = linha.substr(i + 1, (linha.size() - (tolken.size() + 1)));
+        i++;
     }
-    return lista;   
+    lista.push_back(t);
+    return lista;
+}
+
+vector<string> listaComando(string s){
+    vector<string> comandos;
+    vector<string> lista = split(s);
+    
+    for(int i = 0; i < lista.size(); i++){
+        if(lista[i][lista[i].size() - 1] == ':'){
+            comandos.push_back(lista[i].substr(0, lista[i].size() - 2));
+        }else{
+            if(i == 0){
+                comandos.push_back("");
+            }
+            if(lista[i] != ",")
+                comandos.push_back(lista[i]);
+        }
+    }
+    return comandos;   
 }
 
 bool erroLexico(vector<string> *s){
@@ -146,10 +160,6 @@ void tratarPendencias(int valor, vector<int> *listaPendencias){
     listaPendencias->clear();
 }
 
-int getOpcode(string op){
-    
-}
-
 void montador(){
     int contador = 0, i = 0, aux;
     vector<string> comando;
@@ -158,17 +168,20 @@ void montador(){
         comando = listaComando(linhas[i]);  // [simbolo, comando, arg1, agr2] => "" se n tiver simbolo ou agr2
 
         if(erroLexico(&comando)){
-            //tratar erro lexico
+            //informar erro lexico
         }
 
         else if(erroSemantico(&comando)){
-            //tratar erro semantico
+            //informar erro semantico
         }
         else{
             if(comando[0] != ""){
-                if((aux = findSimbolo(comando[0]) != -1)){  //se esta na tabela de simbolos
-                    if(tabelaSimbolos[aux].second.first == true){ //se ja foi definido
+                //se esta na tabela de simbolos
+                if((aux = findSimbolo(comando[0]) != -1)){
+                    //se ja foi definido
+                    if(tabelaSimbolos[aux].second.first == true){ 
                         //erro. declarou duas vezes um mesmo nome
+
                     }else{
                         //tratar lista de pendencias
                         tratarPendencias(contador, tabelaSimbolos[aux].second.second);
@@ -179,12 +192,43 @@ void montador(){
                     tabelaSimbolos.push_back({{comando[0], contador}, {true, &listaPendencias}}); 
                 }
             }
+
             if(comando[1] == "SECTION"){
                 i++;
                 continue;
-            }              
-            codigo.push_back(comando[1]);     
+            }
             
+            //-1 => operacao não identificada
+            codigo.push_back(opcode[comando[1]] == 0? -1 : opcode[comando[1]]);
+                 
+            
+            if(comando[2] != ""){
+                //se estiver na tabela de simbolos
+                if((aux = findSimbolo(comando[2])) != -1){
+                    //se estiver definido
+                    if(tabelaSimbolos[aux].second.first == true){
+                        //colocar o valor no codigo
+                    }else{
+                        //adicionar ocorrencia na lista de pendencias
+                    }
+                }else{ 
+                    //por na tabela de simbolos e por na lista de pendencias
+                }
+            }
+
+            if(comando[3] != ""){
+                //se estiver na tabela de simbolos
+                if((aux = findSimbolo(comando[2])) != -1){
+                    //se estiver definido
+                    if(tabelaSimbolos[aux].second.first == true){
+                        //colocar o valor no codigo
+                    }else{
+                        //adicionar ocorrencia na lista de pendencias
+                    }
+                }else{ 
+                    //por na tabela de simbolos e por na lista de pendencias
+                }
+            }
 
         }
         

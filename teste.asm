@@ -1,6 +1,6 @@
 SECTION TEXT
-    INPUT OLD_DATA
-    LOAD      OLD_DATA
+    INPUT OLD_DATA 
+    LOAD      OLD_DATA + 2
 L1: DIV dois
     STORE  NEW_DATA
 ;sdsdxfedfsfedf
@@ -22,6 +22,6 @@ L1: DIV dois
 SECTION DATA
 dois: 
 CONST 2
-OLD_DATA:    SPACE
+OLD_DATA:    SPACE 2
 NEW_DATA: SPACE
 TMP_DATA: SPACE

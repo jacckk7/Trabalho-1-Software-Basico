@@ -4,8 +4,12 @@
 #include <fstream>
 #include <algorithm>
 #include <map>
+#include <sstream>
 
 #define tabela vector<pair<pair<string, int>, pair<bool, vector<int>*>>>
+#define printL(x) for(auto a: x) cout<<(a == ""? "nada":a)<<" "; cout<<endl;
+#define print(x) cout<<x<<endl;
+#define dbg(x, y) cout<<x<<": "<<y<<endl;
 
 using namespace std;
 
@@ -124,8 +128,12 @@ vector<string> listaComando(string s){
     
     for(int i = 0; i < lista.size(); i++){
         if(lista[i][lista[i].size() - 1] == ':'){
-            comandos.push_back(lista[i].substr(0, lista[i].size() - 2));
+            comandos.push_back(lista[i].substr(0, lista[i].size() - 1));
         }else{
+            if(lista[i] == "+"){
+                i = i + 2;
+                continue;
+            }
             if(i == 0){
                 comandos.push_back("");
             }
@@ -133,15 +141,45 @@ vector<string> listaComando(string s){
                 comandos.push_back(lista[i]);
         }
     }
+    if(comandos.size() < 4){
+        int n = comandos.size();
+        for(int i = 0; i < 4 - n; i++){
+            comandos.push_back("");
+        }
+    }
     return comandos;   
+}
+
+vector<int> argOP(string s){
+    int contMais = 0;
+    vector<int> operacoes = vector<int>(2);
+    vector<string> lista = split(s);
+
+    for(int i = 0; i < lista.size(); i++){
+        if(lista[i] == "+"){
+            contMais++;
+            if (i == lista.size() - 2){
+                if(contMais == 2){
+                    operacoes[1] = stoi(lista[i + 1]);
+                }else{
+                    operacoes[0] = stoi(lista[i + 1]);
+                }
+            }else{
+                operacoes[0] = stoi(lista[i + 1]);            
+            }
+        }
+    }
+    return operacoes;
 }
 
 bool erroLexico(vector<string> *s){
     //verifica erro lexico
+    return false;
 }
 
 bool erroSemantico(vector<string> *s){
     //verifica erro semantico
+    return false;
 }
 
 int findSimbolo(string s){
@@ -154,42 +192,53 @@ int findSimbolo(string s){
 }
 
 void tratarPendencias(int valor, vector<int> *listaPendencias){
+    int aux;
     for(int i = 0; i < listaPendencias->size(); i++){
-        codigo[listaPendencias->at(i)] = valor;
+        aux = codigo[listaPendencias->at(i)];
+        aux = aux + valor;        
+        codigo[listaPendencias->at(i)] = aux;
     }
     listaPendencias->clear();
 }
 
 void montador(){
-    int contador = 0, i = 0, aux;
+    int i = 0, aux;
     vector<string> comando;
+    vector<int> operacoesArgumentos;
 
     while(i < linhas.size()){
+
         comando = listaComando(linhas[i]);  // [simbolo, comando, arg1, agr2] => "" se n tiver simbolo ou agr2
+        operacoesArgumentos = argOP(linhas[i]); //[fator1, fator2] para ser somado ao rotulo
+
+        printL(comando)
 
         if(erroLexico(&comando)){
             //informar erro lexico
+            break;
         }
 
         else if(erroSemantico(&comando)){
             //informar erro semantico
+            break;
         }
         else{
             if(comando[0] != ""){
                 //se esta na tabela de simbolos
-                if((aux = findSimbolo(comando[0]) != -1)){
+                aux = findSimbolo(comando[0]);
+                if(aux != -1){
                     //se ja foi definido
                     if(tabelaSimbolos[aux].second.first == true){ 
                         //erro. declarou duas vezes um mesmo nome
-
                     }else{
                         //tratar lista de pendencias
-                        tratarPendencias(contador, tabelaSimbolos[aux].second.second);
-                        tabelaSimbolos[aux].second.first = true;
+                        tratarPendencias(codigo.size(), tabelaSimbolos[aux].second.second);
+                        tabelaSimbolos[aux].second.first = true; //definido
+                        tabelaSimbolos[aux].first.second = codigo.size(); //valor atualizado
                     }
                 }else{ // nao esta na tabela de simbolos => poe na tabela como definido
-                    vector<int> listaPendencias;
-                    tabelaSimbolos.push_back({{comando[0], contador}, {true, &listaPendencias}}); 
+                    vector<int> * listaPendencias1 = new vector<int>;
+                    tabelaSimbolos.push_back({{comando[0], codigo.size() - 1}, {true, listaPendencias1}}); 
                 }
             }
 
@@ -198,38 +247,88 @@ void montador(){
                 continue;
             }
             
+            else if(comando[1] == "SPACE"){
+                if(comando[2] == ""){
+                    codigo.push_back(0);
+                }else{
+                    for(int j = 0; j < stoi(comando[2]); j++){
+                        codigo.push_back(0);
+                    }
+                }
+                i++;
+                continue;
+            }
+
+            else if(comando[1] == "CONST"){
+                //se for em hexadecimal
+                if(comando[2].size() >= 2 && comando[2].at(1) == 'x'){
+                    //converte para decimal
+                    int intHex;
+                    stringstream ss;
+                    ss << hex << comando[2];
+                    ss >> intHex;
+                    codigo.push_back(intHex);
+                }else{
+                    codigo.push_back(stoi(comando[2]));
+                }
+                i++;
+                continue;
+            }
+            
             //-1 => operacao não identificada
-            codigo.push_back(opcode[comando[1]] == 0? -1 : opcode[comando[1]]);
-                 
+            else{
+                codigo.push_back(opcode[comando[1]] == 0? -1 : opcode[comando[1]]);
+            }    
             
             if(comando[2] != ""){
+                aux = findSimbolo(comando[2]);
+
                 //se estiver na tabela de simbolos
-                if((aux = findSimbolo(comando[2])) != -1){
+                if(aux != -1){
                     //se estiver definido
                     if(tabelaSimbolos[aux].second.first == true){
                         //colocar o valor no codigo
+                        aux = tabelaSimbolos[aux].first.second + operacoesArgumentos[0];
+                        codigo.push_back(aux);
                     }else{
                         //adicionar ocorrencia na lista de pendencias
+                        codigo.push_back(operacoesArgumentos[0]);
+                        tabelaSimbolos[aux].second.second->push_back(codigo.size() - 1);
                     }
                 }else{ 
                     //por na tabela de simbolos e por na lista de pendencias
+                    vector<int> * listaPendencias2 = new vector<int>;
+                    codigo.push_back(operacoesArgumentos[0]);
+                    listaPendencias2->push_back(codigo.size() - 1);
+                    tabelaSimbolos.push_back({{comando[2], -2}, {false, listaPendencias2}});
                 }
             }
-
+            
             if(comando[3] != ""){
+                aux = findSimbolo(comando[3]);
+                
                 //se estiver na tabela de simbolos
-                if((aux = findSimbolo(comando[2])) != -1){
+                if(aux != -1){
                     //se estiver definido
                     if(tabelaSimbolos[aux].second.first == true){
                         //colocar o valor no codigo
+                        aux = tabelaSimbolos[aux].first.second + operacoesArgumentos[1];
+                        codigo.push_back(aux);
                     }else{
                         //adicionar ocorrencia na lista de pendencias
+                        codigo.push_back(operacoesArgumentos[1]);
+                        tabelaSimbolos[aux].second.second->push_back(codigo.size() - 1);
                     }
                 }else{ 
                     //por na tabela de simbolos e por na lista de pendencias
+                    vector<int> * listaPendencias3 = new vector<int>;
+                    codigo.push_back(operacoesArgumentos[1]);
+                    listaPendencias3->push_back(codigo.size() - 1);
+                    tabelaSimbolos.push_back({{comando[2], -2}, {false, listaPendencias3}});
                 }
             }
 
+            i++;
         }
         
     }
@@ -251,6 +350,22 @@ int main(int argc, char *argv[])
         for (int i = 0; i < linhas.size(); i++)
         {
             cout << linhas[i] << endl;
+        }
+        cout << endl;
+
+        montador();
+
+        cout << endl << "codigo feito:" << endl;
+        for(auto c: codigo){
+            cout << c << endl;
+        }
+
+        cout << endl << "tabela de simbolos:" << endl;
+
+        for(auto a : tabelaSimbolos){
+            cout<<a.first.first << " " << a.first.second << " " << a.second.first << " [";
+            cout << a.second.second->size() << " ";
+            cout<<"]\n";
         }
 
         create_arqv();

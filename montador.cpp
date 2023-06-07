@@ -199,14 +199,42 @@ vector<int> argOP(string s){
     return operacoes;
 }
 
-bool erroLexico(vector<string> *s){
+bool erroLexico(string s){
     //verifica erro lexico
+    if (isdigit(s[0])) {
+        cout << "tem numero" << s << endl;
+        return true;
+    }
+
+    for (int i = 0; i < s.length(); i++) {
+        if (s[i] == '_'){
+            continue;
+        } else if (isdigit(s[i])) {
+            continue;
+        } else if (s[i] >= 'A' && s[i] <= 'Z') {
+            continue;
+        } else {
+            return true;
+        }
+    }
+
     return false;
 }
 
-bool erroSemantico(vector<string> *s){
-    //verifica erro semantico
-    return false;
+bool erroSintatico(vector<string> *s){
+    //verifica erro sintatico
+    int cnt = 0;
+    for (int i = 0; i < s->size(); i++) {
+        if (s->at(i).back() == ':') {
+            cnt++;
+        }
+    }
+
+    if (cnt > 1) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 int findSimbolo(string s){
@@ -240,13 +268,14 @@ void montador(){
 
         printL(comando)
 
-        if(erroLexico(&comando)){
+        vector<string> linha = split(linhas[i]);
+        if(linha[0].back() == ':' && erroLexico(comando[0])){
             //informar erro lexico
+            printf("Erro léxico na linha %d: Rótulo inválido.", i + 1);
             break;
-        }
-
-        else if(erroSemantico(&comando)){
-            //informar erro semantico
+        } else if(erroSintatico(&linha)){
+            //informar erro sintatico
+            printf("Erro sintático na linha %d: Dois rótulos na mesma linha.", i + 1);
             break;
         }
         else{
@@ -357,10 +386,7 @@ void montador(){
 
             i++;
         }
-        
     }
-
-    
 }
 
 int main(int argc, char *argv[])
@@ -380,7 +406,7 @@ int main(int argc, char *argv[])
         }
         cout << endl;
 
-        /* montador();
+        montador();
 
         cout << endl << "codigo feito:" << endl;
         for(auto c: codigo){
@@ -393,7 +419,7 @@ int main(int argc, char *argv[])
             cout<<a.first.first << " " << a.first.second << " " << a.second.first << " [";
             cout << a.second.second->size() << " ";
             cout<<"]\n";
-        } */
+        }
 
         create_arqv();
     }

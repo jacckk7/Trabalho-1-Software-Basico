@@ -71,25 +71,52 @@ string remove_space_comments(string linha) {
 void pre_process()
 {
     int i = 0;
+    bool data = false;
+    vector<string> section_data;
+
     while(i < linhas.size())
     {
         transform(linhas[i].begin(), linhas[i].end(), linhas[i].begin(), ::toupper);
         linhas[i] = remove_space_comments(linhas[i]);
 
-        if(linhas[i][0] == '\0') {
-            linhas.erase(linhas.begin() + i);
-        }else if(linhas[i].back() == ':') {
-            linhas[i] = linhas[i] + " " + linhas[i + 1];
-            linhas.erase(linhas.begin() + i + 1);
-            i++;
-        } else{
-            i++;
+        if (i == 0 && linhas[i] == "SECTION DATA") {
+            data = true;
         }
+
+        if (data) {
+            if(linhas[i][0] == '\0') {
+                linhas.erase(linhas.begin() + i);
+            }else if(section_data.size() > 0 && section_data[section_data.size() - 1].back() == ':') {
+                section_data[section_data.size() - 1] = section_data[section_data.size() - 1] + " " + linhas[i];
+                linhas.erase(linhas.begin() + i);
+            } else{
+                section_data.push_back(linhas[i]);
+                linhas.erase(linhas.begin() + i);
+            }
+
+            if(linhas[i + 1] == "SECTION TEXT") {
+                data = false;
+            }
+        } else {
+            if(linhas[i][0] == '\0') {
+                linhas.erase(linhas.begin() + i);
+            }else if(i > 0 && linhas[i - 1].back() == ':') {
+                linhas[i - 1] = linhas[i - 1] + " " + linhas[i];
+                linhas.erase(linhas.begin() + i);
+            } else {
+                i++;
+            } 
+        }
+    }
+
+    for (int i = 0; i <section_data.size(); i++) {
+        linhas.push_back(section_data[i]);
     }
 }
 
 void open_file(string file)
 {
+    file = file + ".asm";
     ifstream arqv(file);
     string hold;
     if (arqv.is_open())
@@ -353,7 +380,7 @@ int main(int argc, char *argv[])
         }
         cout << endl;
 
-        montador();
+        /* montador();
 
         cout << endl << "codigo feito:" << endl;
         for(auto c: codigo){
@@ -366,7 +393,7 @@ int main(int argc, char *argv[])
             cout<<a.first.first << " " << a.first.second << " " << a.second.first << " [";
             cout << a.second.second->size() << " ";
             cout<<"]\n";
-        }
+        } */
 
         create_arqv();
     }

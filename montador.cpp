@@ -118,6 +118,7 @@ void pre_process()
 
 void open_file(string file)
 {
+    linhas.clear();
     file = file + ".asm";
     ifstream arqv(file);
     string hold;

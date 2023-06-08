@@ -15,6 +15,8 @@ using namespace std;
 
 vector<string> linhas;
 vector<int> codigo;
+vector<pair<string, int>> tabelaUso;
+vector<pair<string, int>> tabelaDef;
 tabela tabelaSimbolos;
 map<string, int> opcode = {
     {"ADD", 1},
@@ -256,30 +258,54 @@ void tratarPendencias(int valor, vector<int> *listaPendencias){
     listaPendencias->clear();
 }
 
-void montador(){
+void montador(bool temModulo){
     int i = 0, aux;
+    vector<string> externos;
+    vector<string> publicos;
     vector<string> comando;
     vector<int> operacoesArgumentos;
+
+    if(temModulo){
+        tabelaUso.clear();
+        tabelaDef.clear();
+    }
 
     while(i < linhas.size()){
 
         comando = listaComando(linhas[i]);  // [simbolo, comando, arg1, agr2] => "" se n tiver simbolo ou agr2
         operacoesArgumentos = argOP(linhas[i]); //[fator1, fator2] para ser somado ao rotulo
 
-        printL(comando)
-
         vector<string> linha = split(linhas[i]);
         if(linha[0].back() == ':' && erroLexico(comando[0])){
             //informar erro lexico
             printf("Erro léxico na linha %d: Rótulo inválido.", i + 1);
             break;
+
         } else if(erroSintatico(&linha)){
             //informar erro sintatico
             printf("Erro sintático na linha %d: Dois rótulos na mesma linha.", i + 1);
             break;
-        }
-        else{
-            if(comando[0] != ""){
+        
+        }else{
+            if(temModulo && comando[1] == "BEGIN"){
+                vector<int> * listaPendencias4 = new vector<int>;
+                tabelaSimbolos.push_back({{comando[0], 0}, {true, listaPendencias4}});
+                i++;
+                continue;
+
+            }if(temModulo && comando[0] == "EXTERN"){
+                externos.push_back(comando[1]);
+                vector<int> * listaPendencias3 = new vector<int>;
+                tabelaSimbolos.push_back({{comando[1], -2}, {false, listaPendencias3}});
+                i++;
+                continue;
+
+            } if(temModulo && comando[1] == "PUBLIC"){
+                publicos.push_back(comando[2]);
+                i++;
+                continue;
+
+            }if(comando[0] != ""){
                 //se esta na tabela de simbolos
                 aux = findSimbolo(comando[0]);
                 if(aux != -1){
@@ -387,6 +413,21 @@ void montador(){
             i++;
         }
     }
+    //fazer as tabelas de uso e de definicoes
+    if(temModulo){
+        int aux;
+        for(string a: externos){
+            aux = findSimbolo(a);
+            for(auto b : *tabelaSimbolos[aux].second.second){
+                tabelaUso.push_back({a, b});
+            }
+        }
+
+        for(string a: publicos){
+            aux = findSimbolo(a);
+            tabelaDef.push_back({a, tabelaSimbolos[aux].first.second});
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -406,7 +447,7 @@ int main(int argc, char *argv[])
         }
         cout << endl;
 
-        montador();
+        montador(true);
 
         cout << endl << "codigo feito:" << endl;
         for(auto c: codigo){
@@ -417,8 +458,18 @@ int main(int argc, char *argv[])
 
         for(auto a : tabelaSimbolos){
             cout<<a.first.first << " " << a.first.second << " " << a.second.first << " [";
-            cout << a.second.second->size() << " ";
+            for(auto b : *a.second.second) cout << b << " ";
             cout<<"]\n";
+        }
+
+        cout << endl << "tabela de uso:\n";
+        for(auto a : tabelaUso){
+            cout<<a.first<< " " << a.second << endl;
+        }
+
+        cout << endl << "tabela de definicoes:\n";
+        for(auto a : tabelaDef){
+            cout<<a.first<< " " << a.second << endl;
         }
 
         create_arqv();

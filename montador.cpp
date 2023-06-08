@@ -294,6 +294,7 @@ void montador(bool temModulo){
                 continue;
 
             }if(temModulo && comando[0] == "EXTERN"){
+                
                 externos.push_back(comando[1]);
                 vector<int> * listaPendencias3 = new vector<int>;
                 tabelaSimbolos.push_back({{comando[1], -2}, {false, listaPendencias3}});

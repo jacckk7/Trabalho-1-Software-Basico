@@ -17,6 +17,7 @@ vector<string> linhas;
 vector<int> codigo;
 vector<pair<string, int>> tabelaUso;
 vector<pair<string, int>> tabelaDef;
+vector<int> relativos;
 tabela tabelaSimbolos;
 map<string, int> opcode = {
     {"ADD", 1},
@@ -259,16 +260,27 @@ void tratarPendencias(int valor, vector<int> *listaPendencias){
     listaPendencias->clear();
 }
 
-void montador(bool temModulo){
+void montador(bool temModulo, string file){
     int i = 0, aux;
+    bool temText = false;
+    bool temExtern = false;
+    bool temPublic = false;
+    bool temBegin = false;
+    bool temEnd = false;
+    vector<int> linhasPublic;
+    vector<int> linhasExtern;
     vector<string> externos;
     vector<string> publicos;
     vector<string> comando;
+    vector<pair<string, int>> labelsData;
+    vector<pair<string, int>> labelsText;
     vector<int> operacoesArgumentos;
 
     if(temModulo){
         tabelaUso.clear();
         tabelaDef.clear();
+        tabelaSimbolos.clear();
+        relativos.clear();
     }
 
     while(i < linhas.size()){
@@ -288,21 +300,31 @@ void montador(bool temModulo){
             break;
         
         }else{
-            if(temModulo && comando[1] == "BEGIN"){
+            if(comando[1] == "BEGIN"){
                 vector<int> * listaPendencias4 = new vector<int>;
                 tabelaSimbolos.push_back({{comando[0], 0}, {true, listaPendencias4}});
+                temBegin = true;
                 i++;
                 continue;
 
-            }if(temModulo && comando[0] == "EXTERN"){
+            }if(comando[1] == "END"){
+                temEnd = true;
+                i++;
+                continue;
+                
+            }if(comando[0] == "EXTERN"){
                 externos.push_back(comando[1]);
                 vector<int> * listaPendencias3 = new vector<int>;
                 tabelaSimbolos.push_back({{comando[1], -2}, {false, listaPendencias3}});
+                temExtern = true;
+                linhasExtern.push_back(i + 1);
                 i++;
                 continue;
 
-            } if(temModulo && comando[1] == "PUBLIC"){
+            } if(comando[1] == "PUBLIC"){
                 publicos.push_back(comando[2]);
+                temPublic = true;
+                linhasPublic.push_back(i + 1);
                 i++;
                 continue;
 
@@ -321,11 +343,14 @@ void montador(bool temModulo){
                     }
                 }else{ // nao esta na tabela de simbolos => poe na tabela como definido
                     vector<int> * listaPendencias1 = new vector<int>;
-                    tabelaSimbolos.push_back({{comando[0], codigo.size() - 1}, {true, listaPendencias1}}); 
+                    tabelaSimbolos.push_back({{comando[0], codigo.size()}, {true, listaPendencias1}}); 
                 }
             }
 
             if(comando[1] == "SECTION"){
+                if(comando[2] == "TEXT"){
+                    temText = true;
+                }
                 i++;
                 continue;
             }
@@ -373,17 +398,26 @@ void montador(bool temModulo){
                         //colocar o valor no codigo
                         aux = tabelaSimbolos[aux].first.second + operacoesArgumentos[0];
                         codigo.push_back(aux);
+                        relativos.push_back(codigo.size() - 1);
                     }else{
                         //adicionar ocorrencia na lista de pendencias
                         codigo.push_back(operacoesArgumentos[0]);
+                        relativos.push_back(codigo.size() - 1);
                         tabelaSimbolos[aux].second.second->push_back(codigo.size() - 1);
                     }
                 }else{ 
                     //por na tabela de simbolos e por na lista de pendencias
                     vector<int> * listaPendencias2 = new vector<int>;
                     codigo.push_back(operacoesArgumentos[0]);
+                    relativos.push_back(codigo.size() - 1);
                     listaPendencias2->push_back(codigo.size() - 1);
                     tabelaSimbolos.push_back({{comando[2], -2}, {false, listaPendencias2}});
+
+                    if(comando[1] == "JMP" || comando[1] == "JMPN" || comando[1] == "JMPP" || comando[1] == "JMPZ"){
+                        labelsText.push_back({comando[2], (i + 1)});
+                    }else{
+                        labelsData.push_back({comando[2], (i + 1)});
+                    }
                 }
             }
             
@@ -397,23 +431,29 @@ void montador(bool temModulo){
                         //colocar o valor no codigo
                         aux = tabelaSimbolos[aux].first.second + operacoesArgumentos[1];
                         codigo.push_back(aux);
+                        relativos.push_back(codigo.size() - 1);
                     }else{
                         //adicionar ocorrencia na lista de pendencias
                         codigo.push_back(operacoesArgumentos[1]);
+                        relativos.push_back(codigo.size() - 1);
                         tabelaSimbolos[aux].second.second->push_back(codigo.size() - 1);
                     }
                 }else{ 
                     //por na tabela de simbolos e por na lista de pendencias
                     vector<int> * listaPendencias3 = new vector<int>;
                     codigo.push_back(operacoesArgumentos[1]);
+                    relativos.push_back(codigo.size() - 1);
                     listaPendencias3->push_back(codigo.size() - 1);
-                    tabelaSimbolos.push_back({{comando[2], -2}, {false, listaPendencias3}});
+                    tabelaSimbolos.push_back({{comando[3], -2}, {false, listaPendencias3}});
+
+                    labelsData.push_back({comando[3], (i + 1)});
                 }
             }
 
             i++;
         }
     }
+
     //fazer as tabelas de uso e de definicoes
     if(temModulo){
         int aux;
@@ -429,6 +469,51 @@ void montador(bool temModulo){
             tabelaDef.push_back({a, tabelaSimbolos[aux].first.second});
         }
     }
+
+    //verifica se tem TEXT
+    if(not temText){
+        printf("Erro semantico no arquivo %s.asm: Secao TEXT faltante.\n", file.c_str());
+    }
+
+    //verifica se tem public e extern onde n tem begin e end
+    if((temExtern || temPublic) && (!temBegin || !temEnd)){
+        for(auto a : linhasExtern){
+            printf("Erro semantico na linha %d do arquivo %s: EXTERN sem ter BEGIN e END.\n", a, file.c_str());
+        }
+
+        for(auto a : linhasPublic){
+            printf("Erro semantico na linha %d do arquivo %s: PUBLIC sem ter BEGIN e END.\n", a, file.c_str());
+        }
+    }
+
+    //verifica labels de TEXT n definidas
+    bool achou;
+    for(i = 0; i < labelsText.size(); i++){
+        achou= false;
+        aux = findSimbolo(labelsText[i].first);
+
+        for(string e : externos){
+            if(labelsText[i].first == e) achou = true;
+        }
+
+        if(!achou && tabelaSimbolos[aux].second.first == false){
+            printf("Erro semantico na linha %d no arquivo %s.asm: Rotulo %s nao definido na secao TEXT.\n", labelsText[i].second, file.c_str(), labelsText[i].first.c_str());
+        }
+    }
+
+    //verifica labels de DATA n definidas
+    for(i = 0; i < labelsData.size(); i++){
+        achou= false;
+        aux = findSimbolo(labelsData[i].first);
+
+        for(string e : externos){
+            if(labelsData[i].first == e) achou = true;
+        }
+
+        if(!achou && tabelaSimbolos[aux].second.first == false){
+            printf("Erro semantico na linha %d no arquivo %s.asm: Dado %s nao definido na secao DATA.\n", labelsData[i].second, file.c_str(), labelsData[i].first.c_str());
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -438,42 +523,50 @@ int main(int argc, char *argv[])
         printf("Nenhum arquivo encontrado\n");
     }
     else
-    {
-        open_file(argv[1]);
-        pre_process();
+    {   
+        for(int i = 1; i < argc; i++){
 
-        for (int i = 0; i < linhas.size(); i++)
-        {
-            cout << linhas[i] << endl;
+            open_file(argv[i]);
+            pre_process();
+
+            for (int j = 0; j < linhas.size(); j++)
+            {
+                cout << linhas[j] << endl;
+            }
+            cout << endl;
+
+            montador(true, argv[i]);
+
+            cout << endl << "codigo feito:" << endl;
+            for(auto c: codigo){
+                cout << c << endl;
+            }
+
+            cout << endl << "tabela de simbolos:" << endl;
+
+            for(auto a : tabelaSimbolos){
+                cout<<a.first.first << " " << a.first.second << " " << a.second.first << " [";
+                for(auto b : *a.second.second) cout << b << " ";
+                cout<<"]\n";
+            }
+
+            cout << endl << "tabela de uso:\n";
+            for(auto a : tabelaUso){
+                cout<<a.first<< " " << a.second << endl;
+            }
+
+            cout << endl << "tabela de definicoes:\n";
+            for(auto a : tabelaDef){
+                cout<<a.first<< " " << a.second << endl;
+            }
+
+            cout << endl << "relativos:\n";
+            for(auto a : relativos){
+                cout<<a<< endl;
+            }
+
+            create_arqv();
         }
-        cout << endl;
-
-        montador(true);
-
-        cout << endl << "codigo feito:" << endl;
-        for(auto c: codigo){
-            cout << c << endl;
-        }
-
-        cout << endl << "tabela de simbolos:" << endl;
-
-        for(auto a : tabelaSimbolos){
-            cout<<a.first.first << " " << a.first.second << " " << a.second.first << " [";
-            for(auto b : *a.second.second) cout << b << " ";
-            cout<<"]\n";
-        }
-
-        cout << endl << "tabela de uso:\n";
-        for(auto a : tabelaUso){
-            cout<<a.first<< " " << a.second << endl;
-        }
-
-        cout << endl << "tabela de definicoes:\n";
-        for(auto a : tabelaDef){
-            cout<<a.first<< " " << a.second << endl;
-        }
-
-        create_arqv();
     }
 
     return 0;

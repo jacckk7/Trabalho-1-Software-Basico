@@ -4,7 +4,7 @@
     - Breno Costa Avelino Lima (211010280)
     - Pedro Rodrigues Diógenes Macedo (211042739)
 
-Trabalho feito no Windows 11.
+Trabalho feito no Windows 11, usado o opcode "MUL".
 
 ### Como compilar o programa:
 

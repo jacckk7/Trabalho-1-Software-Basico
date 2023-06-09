@@ -17,7 +17,7 @@ Abrir no codeblocks e buildar usando o gcc.
 ```bash
 ./montador nome_arquivo
 > Arquivo pré-processado: nome_arquivo_preprocess.exc
-> Arquivo de saída: nome_arquivo_1.exc
+> Arquivo de saída: nome_arquivo.exc
 ```
 
 - Para 2, 3 ou 4 arquivos:

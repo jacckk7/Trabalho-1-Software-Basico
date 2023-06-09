@@ -2,9 +2,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <algorithm>
 #include <map>
-#include <sstream>
 
 using namespace std;
 
@@ -124,7 +122,6 @@ int main(int argc, char *argv[])
     }
     else
     {
-
         for (int i = 1; i < argc; i++) {
             fator_correcao.push_back(codigo.size());
             open_file(argv[i], fator_correcao.back());

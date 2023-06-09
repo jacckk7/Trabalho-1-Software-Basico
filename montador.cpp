@@ -36,17 +36,65 @@ map<string, int> opcode = {
     {"STOP", 14}
 };
 
-void create_arqv() {
-    string filename("preprocess.exc");
+void create_arqv_pre_process(string file) {
+    string filename(file + "_preprocess.exc");
     fstream output_fstream;
 
     output_fstream.open(filename, ios_base::out);
     if (!output_fstream.is_open()) {
         cerr << "Falhou ao criar arquivo " << filename << '\n';
     } else {
-        for(int i = 0; i < linhas.size(); i++) {
+        for(int i = 0; i < linhas.size() - 1; i++) {
             output_fstream << linhas[i] << endl;
         }
+        output_fstream << linhas.back();
+    }
+}
+
+void create_arqv(string file) {
+    string filename(file + ".exc");
+    fstream output_fstream;
+
+    output_fstream.open(filename, ios_base::out);
+    if (!output_fstream.is_open()) {
+        cerr << "Falhou ao criar arquivo " << filename << '\n';
+    } else {
+        for(int i = 0; i < codigo.size() - 1; i++) {
+            output_fstream << codigo[i] << " ";
+        }
+        output_fstream << codigo.back();
+    }
+}
+
+void create_arqv_obj(string file) {
+    string filename(file + ".obj");
+    fstream output_fstream;
+
+    output_fstream.open(filename, ios_base::out);
+    if (!output_fstream.is_open()) {
+        cerr << "Falhou ao criar arquivo " << filename << '\n';
+    } else {
+        output_fstream << "USO" << endl;
+        for(int i = 0; i < tabelaUso.size(); i++) {
+            output_fstream << tabelaUso[i].first << " " << tabelaUso[i].second << endl;
+        }
+
+        output_fstream << "DEF" << endl;
+        for(int i = 0; i < tabelaDef.size(); i++) {
+            output_fstream << tabelaDef[i].first << " " << tabelaDef[i].second << endl;
+        }
+
+        output_fstream << "RELATIVOS" << endl;
+        for(int i = 0; i < relativos.size() - 1; i++) {
+            output_fstream << relativos[i] << " ";
+        }
+        output_fstream << relativos.back() << endl;
+
+        output_fstream << "CODE" << endl;
+        for(int i = 0; i < codigo.size() - 1; i++) {
+            output_fstream << codigo[i] << " ";
+        }
+        output_fstream << codigo.back();
     }
 }
 
@@ -182,21 +230,15 @@ vector<string> listaComando(string s){
 }
 
 vector<int> argOP(string s){
-    int contMais = 0;
     vector<int> operacoes = vector<int>(2);
     vector<string> lista = split(s);
 
     for(int i = 0; i < lista.size(); i++){
         if(lista[i] == "+"){
-            contMais++;
-            if (i == lista.size() - 2){
-                if(contMais == 2){
-                    operacoes[1] = stoi(lista[i + 1]);
-                }else{
-                    operacoes[0] = stoi(lista[i + 1]);
-                }
+            if (i == lista.size() - 2 && (lista[0] == "COPY" || lista[1] == "COPY")){
+                operacoes[1] = stoi(lista[i + 1]);
             }else{
-                operacoes[0] = stoi(lista[i + 1]);            
+                operacoes[0] = stoi(lista[i + 1]);
             }
         }
     }
@@ -281,6 +323,7 @@ void montador(bool temModulo, string file){
         tabelaDef.clear();
         tabelaSimbolos.clear();
         relativos.clear();
+        codigo.clear();
     }
 
     while(i < linhas.size()){
@@ -471,7 +514,7 @@ void montador(bool temModulo, string file){
     }
 
     //verifica se tem TEXT
-    if(not temText){
+    if(!temText){
         printf("Erro semantico no arquivo %s.asm: Secao TEXT faltante.\n", file.c_str());
     }
 
@@ -528,44 +571,15 @@ int main(int argc, char *argv[])
 
             open_file(argv[i]);
             pre_process();
+            create_arqv_pre_process(argv[i]);
 
-            for (int j = 0; j < linhas.size(); j++)
-            {
-                cout << linhas[j] << endl;
+            montador(argc > 2, argv[i]);
+
+            if (argc <= 2) {
+                create_arqv(argv[1]);
+            } else {
+                create_arqv_obj(argv[i]);
             }
-            cout << endl;
-
-            montador(true, argv[i]);
-
-            cout << endl << "codigo feito:" << endl;
-            for(auto c: codigo){
-                cout << c << endl;
-            }
-
-            cout << endl << "tabela de simbolos:" << endl;
-
-            for(auto a : tabelaSimbolos){
-                cout<<a.first.first << " " << a.first.second << " " << a.second.first << " [";
-                for(auto b : *a.second.second) cout << b << " ";
-                cout<<"]\n";
-            }
-
-            cout << endl << "tabela de uso:\n";
-            for(auto a : tabelaUso){
-                cout<<a.first<< " " << a.second << endl;
-            }
-
-            cout << endl << "tabela de definicoes:\n";
-            for(auto a : tabelaDef){
-                cout<<a.first<< " " << a.second << endl;
-            }
-
-            cout << endl << "relativos:\n";
-            for(auto a : relativos){
-                cout<<a<< endl;
-            }
-
-            create_arqv();
         }
     }
 

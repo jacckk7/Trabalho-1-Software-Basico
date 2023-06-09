@@ -9,7 +9,6 @@ EXTERN: FINISH
         STORE N3
         OUTPUT N3
         JMP FINISH
-        JUMP OI
         SECTION DATA
 N2:     SPACE
 N3:     SPACE

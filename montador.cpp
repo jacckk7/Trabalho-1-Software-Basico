@@ -412,7 +412,7 @@ void montador(bool temModulo, string file){
 
             else if(comando[1] == "CONST"){
                 //se for em hexadecimal
-                if(comando[2].size() >= 2 && comando[2].at(1) == 'x'){
+                if(comando[2].size() >= 2 && comando[2].at(1) == 'X'){
                     //converte para decimal
                     int intHex;
                     stringstream ss;
